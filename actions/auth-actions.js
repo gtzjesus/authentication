@@ -2,8 +2,8 @@
 'use server';
 
 import { createAuthSession } from '@/lib/auth';
-import { hashUserPassword } from '@/lib/hash';
-import { createUser } from '@/lib/user';
+import { hashUserPassword, verifyPassword } from '@/lib/hash';
+import { createUser, getUserByEmail } from '@/lib/user';
 import { redirect } from 'next/navigation';
 
 export async function signup(prevState, formData) {
@@ -43,4 +43,40 @@ export async function signup(prevState, formData) {
     }
     throw error;
   }
+}
+
+export async function login(prevState, formData) {
+  // grag user info
+  const email = formData.get('email');
+  const password = formData.get('password');
+  // verify valid user
+  const existingUser = getUserByEmail(email);
+  // user not found
+  if (!existingUser) {
+    return {
+      errors: {
+        email: 'Could not authenticate user. Please check your credentials.',
+      },
+    };
+  }
+  const isValidPassword = verifyPassword(existingUser.password, password);
+  // user not found
+  if (!isValidPassword) {
+    return {
+      errors: {
+        email: 'Could not authenticate user. Please check your credentials.',
+      },
+    };
+  }
+  // create the session
+  await createAuthSession(existingUser.id);
+  //redirect to show auth route
+  redirect('/training');
+}
+
+export async function auth(mode, prevState, formData) {
+  if (mode === 'login') {
+    return login(prevState, formData);
+  }
+  return signup(prevState, formData);
 }
